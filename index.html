@@ -6,11 +6,13 @@
 <title>Private & Global Chat App with Admin Signup</title>
 <style>
 body {
-  font-family: Arial, sans-serif;
   display: flex;
-  margin: 0;
+  justify-content: center;
+  align-items: center;
   height: 100vh;
+  margin: 0;
   background-color: #f0f2f5;
+  font-family: Arial, sans-serif;
 }
 
 /* Sidebar */
@@ -22,18 +24,14 @@ body {
   display: flex;
   flex-direction: column;
 }
-#sidebar h2 {
-  margin-top: 0;
-}
+#sidebar h2 { margin-top: 0; }
 #userList div {
   padding: 10px;
   border-radius: 5px;
   cursor: pointer;
   margin-bottom: 5px;
 }
-#userList div:hover {
-  background-color: #e0e0e0;
-}
+#userList div:hover { background-color: #e0e0e0; }
 #addUserInput, #addUserBtn {
   margin-top: 5px;
   padding: 8px;
@@ -42,12 +40,7 @@ body {
   border-radius: 5px;
   border: 1px solid #ccc;
 }
-#addUserBtn {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
+#addUserBtn { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
 #addUserBtn:hover { background-color: #45a049; }
 
 /* Chat Section */
@@ -87,14 +80,13 @@ body {
 
 /* Login / Signup */
 #loginSection {
-  margin: auto;
   background: #fff;
   padding: 30px;
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  width: 300px;
+  width: 320px;
 }
 #loginSection input {
   margin-bottom: 10px;
@@ -157,8 +149,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 const analytics = getAnalytics(app);
-
-const SECRET_KEY = 'MySecretKey123'; // dynamic signup secret
+const SECRET_KEY = 'MySecretKey123';
 
 function encodeEmail(email){ return email.replace('.',','); }
 function getDynamicPassword(){ const now=new Date(); return SECRET_KEY+now.getUTCMinutes(); }
