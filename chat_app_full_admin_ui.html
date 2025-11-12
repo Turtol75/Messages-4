@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Private & Global Chat App with Admin Signup</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  margin: 0;
+  height: 100vh;
+  background-color: #f0f2f5;
+}
+
+/* Sidebar */
+#sidebar {
+  width: 250px;
+  background-color: #fff;
+  border-right: 1px solid #ccc;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+#sidebar h2 {
+  margin-top: 0;
+}
+#userList div {
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+#userList div:hover {
+  background-color: #e0e0e0;
+}
+#addUserInput, #addUserBtn {
+  margin-top: 5px;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+#addUserBtn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+#addUserBtn:hover { background-color: #45a049; }
+
+/* Chat Section */
+#chatSection {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+#messages {
+  flex-grow: 1;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 10px;
+  overflow-y: auto;
+  background-color: #fff;
+}
+.message-bubble {
+  padding: 10px 15px;
+  margin: 5px 0;
+  border-radius: 20px;
+  max-width: 70%;
+  word-wrap: break-word;
+}
+.message-own { background-color: #4CAF50; color: white; margin-left: auto; }
+.message-other { background-color: #e0e0e0; color: black; margin-right: auto; }
+#messageInput, #sendBtn, #logoutBtn {
+  margin-top: 5px;
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;
+}
+#sendBtn { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+#sendBtn:hover { background-color: #45a049; }
+
+/* Login / Signup */
+#loginSection {
+  margin: auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+}
+#loginSection input {
+  margin-bottom: 10px;
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;
+}
+#loginSection button {
+  margin-top: 5px;
+  padding: 10px;
+  border-radius: 5px;
+  border: none;
+  background-color: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+#loginSection button:hover { background-color: #45a049; }
+
+/* Admin panel */
+#adminPasswordPanel {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  display: none;
+}
+#adminPasswordPanel button {
+  margin-top: 5px;
+  width: auto;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+#adminPasswordPanel button:hover { background-color: #45a049; }
+</style>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, push, onChildAdded, onChildRemoved, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBNG87htpHqMe3HRM-F9ftl5z01HHiwMJQ",
+  authDomain: "messages-acce7.firebaseapp.com",
+  databaseURL: "https://messages-acce7-default-rtdb.firebaseio.com",
+  projectId: "messages-acce7",
+  storageBucket: "messages-acce7.firebasestorage.app",
+  messagingSenderId: "471730472939",
+  appId: "1:471730472939:web:2c64f611e6a0d96b57bbae",
+  measurementId: "G-B0EZ3WYCRF"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const analytics = getAnalytics(app);
+
+const SECRET_KEY = 'MySecretKey123'; // dynamic signup secret
+
+function encodeEmail(email){ return email.replace('.',','); }
+function getDynamicPassword(){ const now=new Date(); return SECRET_KEY+now.getUTCMinutes(); }
+
+window.onload = ()=>{
+document.body.innerHTML = `
+<div id='loginSection'>
+<h2>Login / Sign Up</h2>
+<input id='loginEmail' placeholder='Email'>
+<input id='loginPassword' type='password' placeholder='Password'>
+<input id='signupSecret' placeholder='Dynamic Signup Password'>
+<input id='adminUnlock' type='password' placeholder='Admin Unlock Password'>
+<button id='loginBtn'>Login</button>
+<button id='signupBtn'>Sign Up</button>
+<div id='adminPasswordPanel'>
+Current Signup Password: <span id='currentPwd'></span><button id='copyPwd'>Copy Password</button>
+</div>
+</div>
+<div id='sidebar' style='display:none'>
+<h2>Chats</h2>
+<div id='userList'><div id='globalChat'>Global Chat</div></div>
+<input id='addUserInput' placeholder='Email'><button id='addUserBtn'>Add User</button>
+<button id='logoutBtn'>Logout</button>
+</div>
+<div id='chatSection' style='display:none'>
+<div id='messages'></div>
+<input id='messageInput' placeholder='Type a message'><button id='sendBtn'>Send</button>
+</div>
+`;
+
+const loginEmail=document.getElementById('loginEmail');
+const loginPassword=document.getElementById('loginPassword');
+const signupSecret=document.getElementById('signupSecret');
+const loginBtn=document.getElementById('loginBtn');
+const signupBtn=document.getElementById('signupBtn');
+const sidebar=document.getElementById('sidebar');
+const chatSection=document.getElementById('chatSection');
+const userListDiv=document.getElementById('userList');
+const addUserInput=document.getElementById('addUserInput');
+const addUserBtn=document.getElementById('addUserBtn');
+const logoutBtn=document.getElementById('logoutBtn');
+const messagesDiv=document.getElementById('messages');
+const messageInput=document.getElementById('messageInput');
+const sendBtn=document.getElementById('sendBtn');
+const adminUnlockInput=document.getElementById('adminUnlock');
+const adminPanel=document.getElementById('adminPasswordPanel');
+const currentPwd=document.getElementById('currentPwd');
+const copyBtn=document.getElementById('copyPwd');
+
+let currentChatUser='global';
+
+function loadUsers(currentEmail){
+userListDiv.innerHTML=`<div id='globalChat'>Global Chat</div>`;
+get(ref(db,'users')).then(snapshot=>{if(snapshot.exists()){Object.keys(snapshot.val()).forEach(emailKey=>{const email=snapshot.val()[emailKey].email;if(email!==currentEmail){const div=document.createElement('div');div.textContent=email;div.onclick=()=>{currentChatUser=email;messagesDiv.innerHTML='';loadMessages(auth.currentUser.email,currentChatUser);};userListDiv.appendChild(div);}});document.getElementById('globalChat').onclick=()=>{currentChatUser='global';messagesDiv.innerHTML='';loadMessages(auth.currentUser.email,'global');}});
+}
+
+function loadMessages(user1,user2){
+const chatId=user2==='global'?'global':encodeEmail(user1)+'_'+encodeEmail(user2);
+const chatRef=ref(db,'chats/'+chatId);
+messagesDiv.innerHTML='';
+onChildAdded(chatRef,data=>{const msg=data.val();const msgElement=document.createElement('div');msgElement.textContent=msg.text;msgElement.classList.add('message-bubble',msg.user===user1?'message-own':'message-other');msgElement.id=data.key;messagesDiv.appendChild(msgElement);messagesDiv.scrollTop=messagesDiv.scrollHeight;setTimeout(()=>{ref(db,'chats/'+chatId+'/'+data.key).remove().catch(e=>console.error(e));},15000);});
+onChildRemoved(chatRef,data=>{const removed=document.getElementById(data.key);if(removed) removed.remove();});
+sendBtn.onclick=()=>{if(!currentChatUser||messageInput.value.trim()==='') return;push(chatRef,{user:user1,text:messageInput.value});messageInput.value='';};
+}
+
+loginBtn.onclick=()=>{signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value).catch(e=>alert(e.message));};
+signupBtn.onclick=()=>{if(signupSecret.value!==getDynamicPassword()){alert('Incorrect dynamic password');return;}createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value).catch(e=>alert(e.message));};
+
+addUserBtn.onclick=()=>{const newEmail=addUserInput.value.trim();if(!newEmail)return;set(ref(db,'users/'+encodeEmail(newEmail)),{email:newEmail});addUserInput.value='';loadUsers(auth.currentUser.email);};
+logoutBtn.onclick=()=>{signOut(auth);};
+
+adminUnlockInput.addEventListener('input',()=>{if(adminUnlockInput.value==='ilovelydiaford22'){adminPanel.style.display='flex';updatePasswordDisplay();setInterval(updatePasswordDisplay,1000);}else{adminPanel.style.display='none';}});
+function updatePasswordDisplay(){currentPwd.textContent=getDynamicPassword();}
+copyBtn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(getDynamicPassword());copyBtn.textContent='Copied!';setTimeout(()=>copyBtn.textContent='Copy',1000);}catch(e){alert('Copy failed: '+getDynamicPassword());}});
+
+onAuthStateChanged(auth,user=>{if(user){document.getElementById('loginSection').style.display='none';sidebar.style.display='flex';chatSection.style.display='flex';set(ref(db,'users/'+encodeEmail(user.email)),{email:user.email});loadUsers(user.email);loadMessages(user.email,'global');}else{document.getElementById('loginSection').style.display='flex';sidebar.style.display='none';chatSection.style.display='none';}});
+};
+</script>
+</head>
+<body></body>
+</html>
